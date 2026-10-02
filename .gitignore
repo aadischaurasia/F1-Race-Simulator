@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Temporary / backup files
+tempCodeRunnerFile.py
+main old.py
+import pandas as pd.py
+
+# VS Code
+.vscode/
