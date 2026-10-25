@@ -459,10 +459,11 @@ while running:
 
     # Tyre wear depends on the selected compound
     tyre_wear_rate = compound["wear_rate"]
-
+    wear_multiplier = 10
     tyre_wear += (
     abs(acceleration) *
     tyre_wear_rate *
+    wear_multiplier *
     dt
     + throttle * 0.0002 * dt
     )
@@ -524,10 +525,47 @@ while running:
     in_pit_box = pit_box.collidepoint(x, y)
 
     # V2.1 BASIC STRATEGY
-    if tyre_wear >= 50:
-        strategy_message = "CONSIDER PIT"
+    # V2.1.1 COMPOUND-AWARE STRATEGY
+
+    if tyre_compound == "Soft":
+        pit_threshold = 40
+
+    elif tyre_compound == "Medium":
+        pit_threshold = 50
+
     else:
+        pit_threshold = 60
+
+    # V2.1.2 TYRE STRATEGY
+
+       # V2.1.3 COMPOUND-AWARE TYRE STRATEGY
+
+    if tyre_compound == "Soft":
+        manage_threshold = 20
+        pit_threshold = 40
+        urgent_threshold = 65
+
+    elif tyre_compound == "Medium":
+        manage_threshold = 30
+        pit_threshold = 50
+        urgent_threshold = 75
+
+    else:
+        manage_threshold = 40
+        pit_threshold = 60
+        urgent_threshold = 80
+
+    if tyre_wear < manage_threshold:
         strategy_message = "STAY OUT"
+
+    elif tyre_wear < pit_threshold:
+        strategy_message = "MANAGE TYRES"
+
+    elif tyre_wear < urgent_threshold:
+        strategy_message = "CONSIDER PIT"
+
+    else:
+        strategy_message = "PIT SOON"
 
     if in_pit_box and pit_stopping:
         keys = pygame.key.get_pressed()
@@ -556,7 +594,6 @@ while running:
         pit_timer = pit_stop_time
         pit_stop_ready = False
         pit_old_compound = tyre_compound
-
 
     # Pit stop countdown
     if pit_stopping:
@@ -671,48 +708,105 @@ while running:
         round(x, 2),
         round(y, 2)
     ])
+    # ============================================================
+    # TRACK GRAPHICS
+    # ============================================================
 
-    # ========================================================
-    # DRAW
-    # ========================================================
+    # -------------------------
+    # BACKGROUND
+    # -------------------------
 
-    screen.fill(
-        (25, 80, 35)
-    )
+    screen.fill((35, 95, 45))
 
-    # Track
+
+    # -------------------------
+    # RUNOFF AREA
+    # -------------------------
 
     pygame.draw.lines(
         screen,
-        (80, 80, 80),
+        (120, 120, 120),
+        True,
+        track_points,
+        track_width + 30
+    )
+
+
+    # -------------------------
+    # ASPHALT
+    # -------------------------
+
+    pygame.draw.lines(
+        screen,
+        (55, 55, 58),
         True,
         track_points,
         track_width
     )
 
+
+    # -------------------------
+    # TRACK EDGE LINES
+    # -------------------------
+
     pygame.draw.lines(
         screen,
-        (230, 230, 230),
+        (235, 235, 235),
         True,
         track_points,
-        3
-    )
-    # V2.0 Pit Lane
-
-    pygame.draw.rect(
-    screen,
-    (60, 60, 60),
-    pit_lane
+        4
     )
 
-    pygame.draw.rect(
-    screen,
-    (255, 255, 255),
-    pit_box,
-    2
+
+    # -------------------------
+    # KERBS
+    # -------------------------
+
+    for i in range(len(track_points)):
+
+        if i % 2 == 0:
+
+            p1 = track_points[i]
+            p2 = track_points[(i + 1) % len(track_points)]
+
+            pygame.draw.line(
+                screen,
+                (210, 40, 40),
+                p1,
+                p2,
+                10
+            )
+
+        else:
+
+            p1 = track_points[i]
+            p2 = track_points[(i + 1) % len(track_points)]
+
+            pygame.draw.line(
+                screen,
+                (245, 245, 245),
+                p1,
+                p2,
+                10
+            )
+
+
+    # -------------------------
+    # INNER ASPHALT LINE
+    # -------------------------
+
+    pygame.draw.lines(
+        screen,
+        (90, 90, 95),
+        True,
+        track_points,
+        track_width - 12
     )
 
-    # Start / finish
+
+    # -------------------------
+    # START / FINISH LINE
+    # -------------------------
 
     pygame.draw.line(
         screen,
@@ -725,123 +819,209 @@ while running:
             start_line[0],
             start_line[1] + 40
         ),
-        5
+        6
     )
 
-    # Sector markers
 
-    for index in [
-        sector_1_index,
-        sector_2_index
-    ]:
+    # -------------------------
+    # SECTOR MARKERS
+    # -------------------------
 
-        px, py = track_points[index]
+    sector_points = [
+        track_points[sector_1_index],
+        track_points[sector_2_index]
+    ]
+
+    for point in sector_points:
 
         pygame.draw.circle(
             screen,
-            (255, 200, 0),
-            (px, py),
+            (255, 190, 0),
+            point,
             8
         )
 
-    # --------------------------------------------------------
+
+    # -------------------------
+    # PIT LANE
+    # -------------------------
+
+    pygame.draw.rect(
+        screen,
+        (65, 65, 68),
+        pit_lane
+    )
+
+    pygame.draw.rect(
+        screen,
+        (240, 240, 240),
+        pit_lane,
+        3
+    )
+
+
+    # -------------------------
+    # PIT BOX
+    # -------------------------
+
+    pygame.draw.rect(
+        screen,
+        (90, 90, 90),
+        pit_box
+    )
+
+    pygame.draw.rect(
+        screen,
+        (255, 255, 255),
+        pit_box,
+        2
+    )
+        # ========================================================
+        # DRAW
+        # ========================================================
+
+
+
+
+
+    # ============================================================
     # CAR
-    # --------------------------------------------------------
+    # ============================================================
 
     car_length = 34
     car_width = 14
 
     car = pygame.Surface(
-        (
-            car_length,
-            car_width
-        ),
+        (car_length, car_width),
         pygame.SRCALPHA
     )
 
     pygame.draw.rect(
         car,
         (220, 30, 30),
-        (
-            0,
-            0,
-            car_length,
-            car_width
-        )
+        (0, 0, car_length, car_width)
     )
 
-    rotated_car = (
-        pygame.transform.rotate(
-            car,
-            angle
-        )
+    rotated_car = pygame.transform.rotate(
+        car,
+        angle
     )
 
     screen.blit(
         rotated_car,
-        rotated_car.get_rect(
-            center=(x, y)
-        )
+        rotated_car.get_rect(center=(x, y))
     )
+
 
     # ========================================================
     # TELEMETRY DISPLAY
     # ========================================================
 
     font = pygame.font.Font(
-        None,
-        27
+            None,
+            27
     )
 
     speed_kmh = speed * 3.6
 
     telemetry = [
 
-        f"Speed       : {speed_kmh:6.1f} km/h",
+            f"Speed       : {speed_kmh:6.1f} km/h",
 
-        f"Throttle    : {throttle * 100:6.0f} %",
+            f"Throttle    : {throttle * 100:6.0f} %",
 
-        f"Brake       : {brake * 100:6.0f} %",
+            f"Brake       : {brake * 100:6.0f} %",
 
-        f"RPM         : {rpm:6.0f}",
+            f"RPM         : {rpm:6.0f}",
 
-        f"Gear        : {gear}",
+            f"Gear        : {gear}",
 
-        f"Acceleration: {acceleration:6.2f} m/s²",
-        f"Pit Lane    : {'YES' if in_pit_lane else 'NO'}",
-        f"Pit Box     : {'YES' if in_pit_box else 'NO'}",
-        f"Pit Stop    : {'YES' if pit_stopping else 'NO'}",
-        f"Pit Timer   : {pit_timer:4.1f} s",
-        f"Fuel        : {fuel:6.1f} %",
-        f"Tyre Compound : {tyre_compound}",
-        f"Pit Target  : {pit_target_compound}", 
-        f"Tyre Wear   : {tyre_wear:6.1f} %",
-        f"Strategy    : {strategy_message}",
-        f"Vehicle Mass:{total_mass:.1f} kg",
+            f"Acceleration: {acceleration:6.2f} m/s²",
+            f"Pit Lane    : {'YES' if in_pit_lane else 'NO'}",
+            f"Pit Box     : {'YES' if in_pit_box else 'NO'}",
+            f"Pit Stop    : {'YES' if pit_stopping else 'NO'}",
+            f"Pit Timer   : {pit_timer:4.1f} s",
+            f"Fuel        : {fuel:6.1f} %",
+            f"Tyre Compound : {tyre_compound}",
+            f"Pit Target  : {pit_target_compound}",
+            f"Tyre Wear   : {tyre_wear:6.1f} %",
+            f"Strategy    : {strategy_message}",
+            f"Vehicle Mass:{total_mass:.1f} kg",
 
-        "",
+            "",
 
-        f"Lap         : {lap}",
+            f"Lap         : {lap}",
 
-        f"Lap Time    : "
-        f"{format_time(current_lap_time)}",
+            f"Lap Time    : "
+            f"{format_time(current_lap_time)}",
 
-        f"Best Lap    : "
-        + (
-            "--:--.--"
-            if best_lap is None
-            else format_time(best_lap)
-        ),
+            f"Best Lap    : "
+            + (
+                "--:--.--"
+                if best_lap is None
+                else format_time(best_lap)
+            ),
 
-        "",
+            "",
 
-        f"Sector      : {current_sector}"
+            f"Sector      : {current_sector}"
 
+        ]
+
+
+        # =========================
+        # COMPACT TELEMETRY HUD
+        # =========================
+
+        # -------------------------
+        # LEFT TELEMETRY PANEL
+        # -------------------------
+
+    left_panel = pygame.Rect(
+            15,
+            15,
+            350,
+            230
+    )
+
+    pygame.draw.rect(
+        screen,
+        (25, 25, 25),
+        left_panel
+    )
+
+    pygame.draw.rect(
+        screen,
+        (100, 100, 100),
+        left_panel,
+        2
+    )
+
+
+    # Title
+    hud_title = font.render(
+        "LIVE TELEMETRY",
+        True,
+        (255, 255, 255)
+    )
+
+    screen.blit(
+        hud_title,
+        (30, 25)
+    )
+
+
+    # Telemetry values
+    hud_data = [
+        f"Speed        : {speed_kmh:.1f} km/h",
+        f"Throttle     : {throttle * 100:.0f} %",
+        f"Brake        : {brake * 100:.0f} %",
+        f"RPM          : {rpm:.0f}",
+        f"Gear         : {gear}",
+        f"Acceleration : {acceleration:.2f} m/s²"
     ]
 
-    for i, text in enumerate(
-        telemetry
-    ):
+    for i, text in enumerate(hud_data):
 
         surface = font.render(
             text,
@@ -851,17 +1031,72 @@ while running:
 
         screen.blit(
             surface,
-            (
-                20,
-                20 + i * 25
-            )
+            (30, 60 + i * 28)
         )
-    pygame.display.flip()
 
+
+    # -------------------------
+    # RIGHT STRATEGY PANEL
+    # -------------------------
+
+    strategy_panel = pygame.Rect(
+        890,
+        15,
+        250,
+        230
+    )
+
+    pygame.draw.rect(
+        screen,
+        (25, 25, 25),
+        strategy_panel
+    )
+
+    pygame.draw.rect(
+        screen,
+        (100, 100, 100),
+        strategy_panel,
+        2
+    )
+
+
+    strategy_title = font.render(
+        "RACE STATUS",
+        True,
+        (255, 255, 255)
+    )
+
+    screen.blit(
+        strategy_title,
+        (905, 25)
+    )
+
+
+    strategy_data = [
+        f"Fuel     : {fuel:.1f} %",
+        f"Tyre     : {tyre_compound}",
+        f"Wear     : {tyre_wear:.1f} %",
+        f"Mass     : {total_mass:.1f} kg",
+        f"Strategy : {strategy_message}"
+    ]
+
+    for i, text in enumerate(strategy_data):
+
+        surface = font.render(
+            text,
+            True,
+            (255, 255, 255)
+        )
+
+        screen.blit(
+            surface,
+            (905, 60 + i * 30)
+        )
+
+
+    pygame.display.flip()
 # ============================================================
 # SAVE TELEMETRY WHEN PROGRAM CLOSES
 # ============================================================
-
 save_telemetry()
-
 pygame.quit()
